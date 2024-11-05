@@ -16,61 +16,44 @@ public class DragManager : MonoBehaviour
     // Update is called once per frame
     void Update ()
     {
-        if (Input.GetKey(KeyCode.Mouse0))
-        {
-            Ray ray = TheCamera.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (!target)
-            {
-                if (Physics.Raycast(ray , out hit))
-                {
-                    if (hit.transform.GetComponentInParent<Block>())
-                    {
-                        Debug.Log("Hit a block!");
-                        target = hit.transform.GetComponentInParent<Block>();
-                        target.IsDrag = true;
-                        target.ToggleColliders(false);
-                        Prev_Pos = target.GetComponentInParent<BlockTarget>().transform;
-                    }
-                }
-            }
-            else
-            {
-                float enter = 0.0f;
-                if (m_Plane.Raycast(ray , out enter))
-                {
-                    //Get the point that is clicked
-                    Vector3 hitPoint = ray.GetPoint(enter);
+        //if (Input.GetKey(KeyCode.Mouse0))
+        //{
+        //    Ray ray = TheCamera.ScreenPointToRay(Input.mousePosition);
+        //    RaycastHit hit;
+        //    if (!target)
+        //    {
+        //        if (Physics.Raycast(ray , out hit))
+        //        {
+        //            if (hit.transform.GetComponentInParent<Block>())
+        //            {
+        //                Debug.Log("Hit a block!");
+        //                target = hit.transform.GetComponentInParent<Block>();
+        //                target.IsDrag = true;
+        //                target.ToggleColliders(false);
+        //                Prev_Pos = target.GetComponentInParent<BlockTarget>().transform;
+        //            }
+        //        }
+        //    }
+        //    else
+        //    {
+        //        float enter = 0.0f;
+        //        if (m_Plane.Raycast(ray , out enter))
+        //        {
+        //            //Get the point that is clicked
+        //            Vector3 hitPoint = ray.GetPoint(enter);
 
-                    //Move your cube GameObject to the point where you clicked
-                    target.transform.position = hitPoint + Offset;
-                }
-            }
-        }
-        else
-        {
-            if (target)
-            {
-                //place
-                target.IsDrag = false;
-                Debug.Log(Place(target));
-                if (Place(target))
-                {
-
-                }
-                else
-                {
-                    StartCoroutine(target.MoveToTarget(target.transform , Prev_Pos));
-                    target.isAlreadyLifted = false;
-                    target = null;
-                }
-            }
-        }
-    }
-
-    public bool Place(Block Target )
-    {
-
-        return false;
+        //            //Move your cube GameObject to the point where you clicked
+        //            target.transform.position = hitPoint + Offset;
+        //        }
+        //    }
+        //}
+        //else
+        //{
+        //    if (target)
+        //    {
+        //        //place
+        //        target.IsDrag = false;
+        //    }
+        //}
     }
 }

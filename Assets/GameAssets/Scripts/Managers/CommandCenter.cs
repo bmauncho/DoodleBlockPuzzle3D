@@ -5,6 +5,7 @@ public class CommandCenter : MonoBehaviour
     public static CommandCenter Instance ;
     public ColorLib ColorLib_;
     public BlockLib BlockLib_;
+
     private void Awake ()
     {
         if (Instance != null && Instance != this)
