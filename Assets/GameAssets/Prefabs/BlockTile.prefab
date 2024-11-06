@@ -90,6 +90,8 @@ MonoBehaviour:
   - {fileID: 6757536556582666356}
   OccupiedTarget: {fileID: 0}
   isStatic: 0
+  ErrorMat: {fileID: 2100000, guid: d61d1ec1347056f4889c7214046ae8f1, type: 2}
+  FlipMat: {fileID: 2100000, guid: 21429a8cbcd62a843a2269848bf91188, type: 2}
 --- !u!65 &6310462285233881098
 BoxCollider:
   m_ObjectHideFlags: 0

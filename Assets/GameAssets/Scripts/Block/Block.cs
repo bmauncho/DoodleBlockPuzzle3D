@@ -1,9 +1,12 @@
 using DG.Tweening;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Block : MonoBehaviour
 {
+    Level level;
+    Transform PrevPos;
     bool IsDrag = false;
     public bool IsAlreadyLifted = false;
     public bool IsPlaced = false;
@@ -11,9 +14,11 @@ public class Block : MonoBehaviour
 
     private void Start ()
     {
+        PrevPos = GetComponentInParent<BlockTarget> ().transform;
         blockTiles = GetComponentsInChildren<BlockTile>();
+        level = GetComponentInParent(typeof(Level)) as Level;
     }
-
+   
     public void Drag ( Vector3 Offset )
     {
         //Debug.Log("Starting Dragging");
@@ -28,12 +33,12 @@ public class Block : MonoBehaviour
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         if (Physics.Raycast(ray , out hit))
         {
-            //Debug.Log($"Hit: {hit.transform.name}");
-            transform.position = ( hit.point - Offset ) + new Vector3(0 , 1 , 0);
+            Debug.Log($"Hit: {hit.transform.name}");
+            transform.position = ( hit.point - Offset ) + new Vector3(0 , 2 , 0);
         }
         else
         {
-            //Debug.Log("No object hit by raycast");
+            Debug.Log("No object hit by raycast");
         }
 
         // Clear OccupiedTarget references
@@ -50,53 +55,84 @@ public class Block : MonoBehaviour
         IsDrag = true;
     }
 
+    // Block.cs
     public void FinishedDrag ()
     {
         Debug.Log("Finishing Drag");
 
+        // Re-enable colliders on block tiles after dragging
+        foreach (var tile in blockTiles)
+        {
+            tile.GetComponent<Collider>().enabled = true;
+        }
+
+        // Check if placement is correct
         if (CheckCorrect())
         {
+            Debug.Log("Placement successful");
+            level.OnBlockPlacement();
+        }
+        else
+        {
+            Debug.Log("Placement failed, clearing tiles");
             foreach (var tile in blockTiles)
             {
-                tile.GetComponentInChildren<Collider>().enabled = true;
-            }
-        }
-
-        if (GetComponentInParent<Level>().CanCheckOver())
-        {
-            if (GetComponentInParent<Level>().CheckSuccess())
-            {
-                Debug.Log("Placement successful");
-            }
-            else
-            {
-                Debug.Log("Placement failed, clearing tiles");
-                foreach (var tile in blockTiles)
+                if (tile.OccupiedTarget != null)
                 {
-                    if (tile.OccupiedTarget != null)
+                    var tileComponent = tile.OccupiedTarget.GetComponent<Tile>();
+                    if (tileComponent != null)
                     {
-                        var tileComponent = tile.OccupiedTarget.GetComponent<Tile>();
-                        if (tileComponent != null)
-                        {
-                            tileComponent.Owner = null;
-                        }
-                        tile.OccupiedTarget = null;
+                        tileComponent.Owner = null;
                     }
+                    tile.OccupiedTarget = null;
                 }
-
             }
+            StartCoroutine(ErrorShow());
         }
-        for (int i = 0 ; i < blockTiles.Length ; i++)
-        {
-            blockTiles [i].GetComponent<Collider>().enabled = true;
-        }
-        IsDrag = false;
     }
+
+    IEnumerator ErrorShow ()
+    {
+        MeshRenderer [] Meshes = GetComponentsInChildren<MeshRenderer>();
+        Material [] originalMaterials = new Material [Meshes.Length];
+        float waitTime = 0.5f;
+
+        // Change materials to indicate error
+        for (int i = 0 ; i < Meshes.Length ; i++)
+        {
+            originalMaterials [i] = Meshes [i].material;
+            Meshes [i].material = Meshes [i].GetComponentInParent<BlockTile>().ErrorMat;
+        }
+
+        // Shake block for error feedback
+        transform.DOShakeRotation(0.5f , 20 , 10 , 45 , true);
+        yield return new WaitForSeconds(waitTime);
+
+        // Reset materials and move back to initial position
+        for (int i = 0 ; i < Meshes.Length ; i++)
+        {
+            Meshes [i].material = originalMaterials [i];
+        }
+        transform.eulerAngles = Vector3.zero;
+        transform.DOMove(PrevPos.position , 0.5f);
+
+        // Re-enable colliders on block tiles after error show
+        foreach (var tile in blockTiles)
+        {
+            tile.GetComponent<Collider>().enabled = true;
+        }
+
+        IsDrag = false;
+        IsPlaced = false; // Ensure IsPlaced is set to false for incorrect placements
+    
+        yield return null;
+        
+    }
+
 
     public bool CheckCorrect ()
     {
         int correctCount = 0;
-        Vector3 offset = Vector3.zero;
         foreach (var tile in blockTiles)
         {
             Transform hitTransform = tile.GetSingleHit();
@@ -105,42 +141,30 @@ public class Block : MonoBehaviour
                 if (tileComponent.AddOwner(tile.gameObject))
                 {
                     correctCount++;
-                    offset = transform.InverseTransformPoint(tileComponent.transform.position) - tile.transform.localPosition;
                 }
-            }
-            else
-            {
-                Debug.Log("No tile detected for block tile during CheckCorrect");
             }
         }
 
         if (correctCount == blockTiles.Length)
         {
             IsPlaced = true;
-            offset.y = 0;
-            Vector3 targetPos = transform.position + new Vector3(0 , -1 , 0) + offset;
-            transform.DOMove(targetPos , 0.1f);
+            transform.DOMove(transform.position + new Vector3(0 , -2 , 0) , 0.1f);
             return true;
         }
         else
         {
-            Debug.Log("Not all block tiles are correctly positioned");
             foreach (var tile in blockTiles)
             {
                 if (tile.OccupiedTarget != null)
                 {
-                    // Set the Owner property of the Tile component to null
                     var tileComponent = tile.OccupiedTarget.GetComponent<Tile>();
                     if (tileComponent != null)
                     {
                         tileComponent.Owner = null;
                     }
-
-                    // Clear the OccupiedTarget reference
                     tile.OccupiedTarget = null;
                 }
             }
-
             return false;
         }
     }
