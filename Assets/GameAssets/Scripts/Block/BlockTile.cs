@@ -4,16 +4,24 @@ using UnityEngine;
 
 public class BlockTile : MonoBehaviour
 {
-    public bool IsDrag;
+    private Vector3 initialMousePosition;
     public Transform [] RayPoints;
     [HideInInspector] public GameObject OccupiedTarget;
+    public bool IsDragging;
     public bool isStatic;
+    public bool IsClicked;
     public Material ErrorMat;
     public Material FlipMat;
     Vector3 StartPos;
     Vector3 UpPos;
     float WaveTimestamp;
     float UsedTimestamp;
+    public float ClickResetTime = .25f;
+    private float mouseDownTime;
+    private float dragThreshold = 10f; // Adjust this for click vs drag sensitivity
+    private bool isMouseHeld = false;
+    private const float holdThreshold = 0.1f; // Time threshold in seconds
+    private bool actionTriggered = false;
     private void Start ()
     {
         StartPos = transform.localPosition;
@@ -22,21 +30,65 @@ public class BlockTile : MonoBehaviour
     private void OnMouseDown ()
     {
         //Debug.Log("Mouse Down on BlockTile");
-        IsDrag = true;
+        initialMousePosition = Input.mousePosition;
+        IsDragging = false;
+        IsClicked = false;
+        mouseDownTime = Time.time;
+        isMouseHeld = true;
+        actionTriggered = false;
+    }
+
+    private void OnMouseDrag ()
+    {
+        float distance = Vector3.Distance(initialMousePosition , Input.mousePosition);
+
+        if (distance > dragThreshold)
+        {
+            // Start dragging only if the movement exceeds the threshold
+            IsDragging = true;
+        }
     }
 
     private void OnMouseUp ()
     {
-        IsDrag = false;
-        GetComponentInParent<Block>().FinishedDrag();
-        //Debug.Log("Mouse Up on BlockTile");
+        if (!IsDragging)
+        {
+            IsClicked = true;
+            Clicked();
+        }
+        else
+        {
+            IsDragging = false;
+            GetComponentInParent<Block>().FinishedDrag();
+        }
+        isMouseHeld = false;
+        Debug.Log("Mouse Up on BlockTile");
     }
-
     private void Update ()
     {
-        if (IsDrag)
+        Debug.Log(mouseDownTime);
+        if (isMouseHeld && !actionTriggered && Time.time - mouseDownTime > holdThreshold)
+        {
+            // Action to perform after holding for more than 0.3 seconds
+            TriggerAction();
+            actionTriggered = true;  // Prevent repeated actions
+        }
+
+
+        if (IsDragging)
         {
             GetComponentInParent<Block>().Drag(transform.localPosition);
+        }
+        else if (IsClicked)
+        {
+            GetComponentInParent<Block>().Rotate();
+            ClickResetTime -= Time.deltaTime;
+            if (ClickResetTime<=0)
+            {
+                IsClicked = false;
+                ClickResetTime = .25f;
+            }
+            
         }
         else
         {
@@ -52,6 +104,21 @@ public class BlockTile : MonoBehaviour
             }
         }
     }
+    void Clicked ()
+    {
+        if (isMouseHeld && Time.time - mouseDownTime < holdThreshold)
+        {
+            // You can add an action here for a short press if desired
+            Debug.Log("Mouse released too soon!");
+        }
+    }
+    void TriggerAction ()
+    {
+        // Perform the action, e.g., rotate the object
+        Debug.Log("Mouse held down for more than 0.3 seconds - Action triggered");
+        GetComponentInParent<Block>().Bounce();    
+    }
+
     public void Wave ()
     {
         if (UsedTimestamp > Time.time)

@@ -2,15 +2,17 @@ using DG.Tweening;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class Block : MonoBehaviour
 {
     Level level;
+    Vector3 StartPos;
     Transform PrevPos;
     bool IsDrag = false;
-    public bool IsAlreadyLifted = false;
     public bool IsPlaced = false;
     BlockTile [] blockTiles;
+    public bool IsClicked;
 
     private void Start ()
     {
@@ -18,11 +20,21 @@ public class Block : MonoBehaviour
         blockTiles = GetComponentsInChildren<BlockTile>();
         level = GetComponentInParent(typeof(Level)) as Level;
     }
+
+    private void Update ()
+    {
+        IsClicked = CheckClick();
+    }
+
+    public void Rotate ()
+    {
+        Debug.Log("Rotate");
+    }
    
     public void Drag ( Vector3 Offset )
     {
-        //Debug.Log("Starting Dragging");
-
+        IsPlaced = false;
+        IsDrag = true;
         // Disable colliders on block tiles to prevent interaction while dragging
         foreach (var tile in blockTiles)
         {
@@ -50,9 +62,17 @@ public class Block : MonoBehaviour
                 tile.OccupiedTarget = null;
             }
         }
+    }
 
-        IsPlaced = false;
-        IsDrag = true;
+    public void Bounce()
+    {
+        RaycastHit hit;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (Physics.Raycast(ray , out hit))
+        {
+            Vector3 ScaleOffset = new Vector3(.2f , .2f , .2f);
+            transform.DOPunchScale(ScaleOffset , .25f , 10 , 1);
+        }
     }
 
     // Block.cs
@@ -69,7 +89,14 @@ public class Block : MonoBehaviour
         // Check if placement is correct
         if (CheckCorrect())
         {
+            IsPlaced = true;
             Debug.Log("Placement successful");
+            if (transform.GetComponentInParent<BlockTarget>()?.TheOwner)
+            {
+                transform.GetComponentInParent<BlockTarget>().TheOwner = null;
+                transform.SetParent(level.transform);
+            }
+
             level.OnBlockPlacement();
         }
         else
@@ -114,7 +141,17 @@ public class Block : MonoBehaviour
             Meshes [i].material = originalMaterials [i];
         }
         transform.eulerAngles = Vector3.zero;
-        transform.DOMove(PrevPos.position , 0.5f);
+        Vector3 Offset = new Vector3(0 , .5f , 0);
+        StartPos = new Vector3(transform.position.x , StartPos.y+Offset.y  , transform.position.z);
+        if (transform.GetComponentInParent<BlockTarget>()?.TheOwner)
+        {
+            transform.DOMove(PrevPos.position , 0.5f);
+        }
+        else
+        {
+            transform.DOMove(StartPos , .5f);
+        }
+        
 
         // Re-enable colliders on block tiles after error show
         foreach (var tile in blockTiles)
@@ -133,14 +170,17 @@ public class Block : MonoBehaviour
     public bool CheckCorrect ()
     {
         int correctCount = 0;
-        foreach (var tile in blockTiles)
+        Vector3 offset = Vector3.zero;
+        for(int i =0 ; i < blockTiles.Length ;i++)
         {
-            Transform hitTransform = tile.GetSingleHit();
+            Transform hitTransform = blockTiles [i].GetSingleHit();
             if (hitTransform != null && hitTransform.GetComponentInParent<Tile>() is Tile tileComponent)
             {
-                if (tileComponent.AddOwner(tile.gameObject))
+                if (tileComponent.AddOwner(blockTiles [i].gameObject))
                 {
                     correctCount++;
+                    offset = transform.InverseTransformPoint(hitTransform.GetComponentInParent<Tile>().transform.position)
+                        - blockTiles [i].transform.localPosition;
                 }
             }
         }
@@ -148,7 +188,8 @@ public class Block : MonoBehaviour
         if (correctCount == blockTiles.Length)
         {
             IsPlaced = true;
-            transform.DOMove(transform.position + new Vector3(0 , -2 , 0) , 0.1f);
+            Vector3 TargetPos = transform.position + new Vector3(0 , 0 , 0) + offset;
+            transform.DOMove(TargetPos , 0.1f);
             return true;
         }
         else
@@ -167,5 +208,17 @@ public class Block : MonoBehaviour
             }
             return false;
         }
+    }
+
+    public bool CheckClick ()
+    {
+        for (int i = 0; i < blockTiles.Length; i++)
+        {
+            if (blockTiles [i].IsClicked)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }

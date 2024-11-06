@@ -38,7 +38,7 @@ public class BlockManager : MonoBehaviour
             {
                 if (blocks.Count == 0)
                 {
-                    Debug.LogWarning("No more blocks to spawn.");
+                    //Debug.LogWarning("No more blocks to spawn.");
                     break;
                 }
                 // Instantiate block from the first in the list
