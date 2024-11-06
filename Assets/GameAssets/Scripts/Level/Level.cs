@@ -6,6 +6,7 @@ public class Level : MonoBehaviour
 {
     Tile [] Tiles;
     List<BlockTile> Rearrangedtiles = new List<BlockTile>();
+    public ParticleSystem Confetti;
     private void Start ()
     {
         Tiles = GetComponentsInChildren<Tile>();
@@ -111,5 +112,7 @@ public class Level : MonoBehaviour
             }
             yield return new WaitForSeconds(T);
         }
+        yield return new WaitForSeconds(.25f);
+        Confetti.Play();
     }
 }

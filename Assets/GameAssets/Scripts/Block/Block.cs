@@ -9,7 +9,7 @@ public class Block : MonoBehaviour
     Level level;
     Vector3 StartPos;
     Transform PrevPos;
-    bool IsDrag = false;
+    public bool IsDrag = false;
     public bool IsPlaced = false;
     BlockTile [] blockTiles;
     public bool IsClicked;
@@ -189,7 +189,18 @@ public class Block : MonoBehaviour
         {
             IsPlaced = true;
             Vector3 TargetPos = transform.position + new Vector3(0 , 0 , 0) + offset;
-            transform.DOMove(TargetPos , 0.1f);
+            transform.DOMove(TargetPos , 0.1f)
+                .OnComplete(() =>
+                {
+                    for(int i = 0 ; i < blockTiles.Length ;i++)
+                    {
+                        if(blockTiles [i].LandingSmoke)
+                        {
+                            blockTiles [i].LandingSmoke.GetComponent<ParticleSystem>().Play();
+                        }
+                    }
+                    Camera.main.DOShakePosition(.2f , .1f , 1 , 45 , true , ShakeRandomnessMode.Harmonic);
+                });
             return true;
         }
         else

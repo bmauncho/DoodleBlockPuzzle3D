@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static UnityEditor.PlayerSettings;
 
 public class BlockTile : MonoBehaviour
 {
@@ -22,6 +23,9 @@ public class BlockTile : MonoBehaviour
     private bool isMouseHeld = false;
     private const float holdThreshold = 0.1f; // Time threshold in seconds
     private bool actionTriggered = false;
+    public GameObject StarBurst;
+    public GameObject LandingSmoke;
+
     private void Start ()
     {
         StartPos = transform.localPosition;
@@ -66,7 +70,6 @@ public class BlockTile : MonoBehaviour
     }
     private void Update ()
     {
-        Debug.Log(mouseDownTime);
         if (isMouseHeld && !actionTriggered && Time.time - mouseDownTime > holdThreshold)
         {
             // Action to perform after holding for more than 0.3 seconds
@@ -115,7 +118,7 @@ public class BlockTile : MonoBehaviour
     void TriggerAction ()
     {
         // Perform the action, e.g., rotate the object
-        Debug.Log("Mouse held down for more than 0.3 seconds - Action triggered");
+       // Debug.Log("Mouse held down for more than 0.3 seconds - Action triggered");
         GetComponentInParent<Block>().Bounce();    
     }
 
@@ -131,7 +134,10 @@ public class BlockTile : MonoBehaviour
         WaveTimestamp = Time.time + 0.3f;
         transform.localPosition += new Vector3(0 , 1.5f , 0);
         StartCoroutine(ChangeColor());
-
+        if (StarBurst)
+        {
+            StarBurst.transform.GetComponent<ParticleSystem>().Play();
+        }
     }
     IEnumerator ChangeColor ()
     {
@@ -144,6 +150,7 @@ public class BlockTile : MonoBehaviour
         }
         yield return new WaitForSeconds(0.2f);
     }
+
     public void ShowCorrect ()
     {
         MeshRenderer [] Meshes = GetComponentsInChildren<MeshRenderer>();

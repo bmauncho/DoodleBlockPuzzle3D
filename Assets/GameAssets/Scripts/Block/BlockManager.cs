@@ -95,7 +95,7 @@ public class BlockManager : MonoBehaviour
 
     private void MaterialSwap (GameObject block,Material Mat)
     {
-        Renderer [] rend = block.GetComponentsInChildren<Renderer>();
+        MeshRenderer [] rend = block.GetComponentsInChildren<MeshRenderer>();
         for(int i = 0; i < rend.Length; i++)
         {
             rend [i].material = Mat;
