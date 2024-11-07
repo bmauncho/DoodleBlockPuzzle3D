@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using static UnityEditor.PlayerSettings;
 
 public class BlockTile : MonoBehaviour
 {
@@ -11,6 +10,7 @@ public class BlockTile : MonoBehaviour
     public bool IsDragging;
     public bool isStatic;
     public bool IsClicked;
+    public bool IsDoubleclicked;
     public Material ErrorMat;
     public Material FlipMat;
     Vector3 StartPos;
@@ -19,12 +19,18 @@ public class BlockTile : MonoBehaviour
     float UsedTimestamp;
     public float ClickResetTime = .25f;
     private float mouseDownTime;
-    private float dragThreshold = 10f; // Adjust this for click vs drag sensitivity
+    private float dragThreshold = 10f;
     private bool isMouseHeld = false;
-    private const float holdThreshold = 0.1f; // Time threshold in seconds
+    private const float holdThreshold = 0.1f;
     private bool actionTriggered = false;
     public GameObject StarBurst;
     public GameObject LandingSmoke;
+    public bool clockwiserotation = false;
+    public bool counterclockwiserotation = false;
+
+    private int clickCount = 0;
+    private float clickResetDelay = 0.2f; // Delay to reset the click count
+    private Coroutine clickCoroutine;
 
     private void Start ()
     {
@@ -33,13 +39,14 @@ public class BlockTile : MonoBehaviour
 
     private void OnMouseDown ()
     {
-        //Debug.Log("Mouse Down on BlockTile");
         initialMousePosition = Input.mousePosition;
         IsDragging = false;
         IsClicked = false;
         mouseDownTime = Time.time;
         isMouseHeld = true;
         actionTriggered = false;
+        clockwiserotation = false;
+        counterclockwiserotation = false;
     }
 
     private void OnMouseDrag ()
@@ -48,7 +55,6 @@ public class BlockTile : MonoBehaviour
 
         if (distance > dragThreshold)
         {
-            // Start dragging only if the movement exceeds the threshold
             IsDragging = true;
         }
     }
@@ -57,26 +63,77 @@ public class BlockTile : MonoBehaviour
     {
         if (!IsDragging)
         {
-            IsClicked = true;
-            Clicked();
+            clickCount++;
+
+            // If a coroutine is already running, stop it to reset the delay
+            if (clickCoroutine != null)
+            {
+                StopCoroutine(clickCoroutine);
+            }
+
+            // Start the coroutine to check click count after a delay
+            clickCoroutine = StartCoroutine(HandleClicks());
         }
         else
         {
             IsDragging = false;
             GetComponentInParent<Block>().FinishedDrag();
         }
+
         isMouseHeld = false;
-        Debug.Log("Mouse Up on BlockTile");
     }
+
+    private IEnumerator HandleClicks ()
+    {
+        yield return new WaitForSeconds(clickResetDelay);
+
+        if (clickCount == 1)
+        {
+            // Single-click detected
+            IsClicked = true;
+            IsDoubleclicked = false;
+            Clicked();
+        }
+        else if (clickCount == 2)
+        {
+            // Double-click detected
+            IsDoubleclicked = true;
+            IsClicked = false;
+            DoubleClicked();
+        }
+
+        // Reset the click count and coroutine reference
+        clickCount = 0;
+        clickCoroutine = null;
+    }
+
+
+    void Clicked ()
+    {
+        if (!clockwiserotation)
+        {
+            clockwiserotation = true;
+            GetComponentInParent<Block>().Rotate(true); // Clockwise rotation
+        }
+    }
+
+    void DoubleClicked ()
+    {
+        Debug.Log("Double-clicked on BlockTile!");
+        if (!counterclockwiserotation)
+        {
+            counterclockwiserotation = true;
+            GetComponentInParent<Block>().Rotate(false); // Counterclockwise rotation
+        }
+    }
+
     private void Update ()
     {
         if (isMouseHeld && !actionTriggered && Time.time - mouseDownTime > holdThreshold)
         {
-            // Action to perform after holding for more than 0.3 seconds
             TriggerAction();
-            actionTriggered = true;  // Prevent repeated actions
+            actionTriggered = true;
         }
-
 
         if (IsDragging)
         {
@@ -84,14 +141,12 @@ public class BlockTile : MonoBehaviour
         }
         else if (IsClicked)
         {
-            GetComponentInParent<Block>().Rotate();
             ClickResetTime -= Time.deltaTime;
-            if (ClickResetTime<=0)
+            if (ClickResetTime <= 0)
             {
                 IsClicked = false;
                 ClickResetTime = .25f;
             }
-            
         }
         else
         {
@@ -107,19 +162,11 @@ public class BlockTile : MonoBehaviour
             }
         }
     }
-    void Clicked ()
-    {
-        if (isMouseHeld && Time.time - mouseDownTime < holdThreshold)
-        {
-            // You can add an action here for a short press if desired
-            Debug.Log("Mouse released too soon!");
-        }
-    }
+
+
     void TriggerAction ()
     {
-        // Perform the action, e.g., rotate the object
-       // Debug.Log("Mouse held down for more than 0.3 seconds - Action triggered");
-        GetComponentInParent<Block>().Bounce();    
+        GetComponentInParent<Block>().Bounce();
     }
 
     public void Wave ()
@@ -139,6 +186,7 @@ public class BlockTile : MonoBehaviour
             StarBurst.transform.GetComponent<ParticleSystem>().Play();
         }
     }
+
     IEnumerator ChangeColor ()
     {
         MeshRenderer [] Meshes = GetComponentsInChildren<MeshRenderer>();
@@ -167,13 +215,11 @@ public class BlockTile : MonoBehaviour
         RaycastHit hit;
         foreach (var point in RayPoints)
         {
-            // Draw a ray from each RayPoint downward with a length of 20 units
             Debug.DrawRay(point.position , Vector3.down * 20f , Color.red , 0.1f);
 
-            // Cast the ray
             if (Physics.Raycast(point.position , Vector3.down , out hit , 20f))
             {
-                return hit.transform; // Returns the first hit
+                return hit.transform;
             }
         }
         return null;
@@ -192,5 +238,4 @@ public class BlockTile : MonoBehaviour
         }
         return hitList;
     }
-
 }

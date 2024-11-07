@@ -93,11 +93,14 @@ MonoBehaviour:
   IsDragging: 0
   isStatic: 0
   IsClicked: 0
+  IsDoubleclicked: 0
   ErrorMat: {fileID: 2100000, guid: d61d1ec1347056f4889c7214046ae8f1, type: 2}
   FlipMat: {fileID: 2100000, guid: 21429a8cbcd62a843a2269848bf91188, type: 2}
   ClickResetTime: 0.25
   StarBurst: {fileID: 8774366695712291280}
   LandingSmoke: {fileID: 8149840357006360528}
+  clockwiserotation: 0
+  counterclockwiserotation: 0
 --- !u!65 &6310462285233881098
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -478,7 +481,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   outlineMode: 1
   outlineColor: {r: 0.20000002, g: 0.20000002, b: 0.20000002, a: 1}
-  outlineWidth: 8
+  outlineWidth: 10
   precomputeOutline: 1
   bakeKeys:
   - {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}

@@ -26,9 +26,38 @@ public class Block : MonoBehaviour
         IsClicked = CheckClick();
     }
 
-    public void Rotate ()
+    public void Rotate (bool isClockwise)
     {
-        Debug.Log("Rotate");
+        if (isClockwise)
+        {
+            Debug.Log("Rotate clockwise");
+            //StartCoroutine(Rotation(true));  
+        }
+        else
+        {
+            Debug.Log("Rotate  counterclockwise");
+            //StartCoroutine(Rotation(false));
+        }
+        
+    }
+    
+    IEnumerator Rotation(bool isClockwise )
+    {
+        Rotator rotator = transform.GetComponentInChildren<Rotator>();
+        if (isClockwise)
+        {
+
+            Quaternion newRot = rotator.transform.rotation * Quaternion.Euler(0 , 90 , 0);
+            rotator.transform.DORotateQuaternion(newRot , 0.25f);
+
+        }
+        else
+        {
+            Quaternion newRot = rotator.transform.rotation * Quaternion.Euler(0 , -90 , 0);
+            rotator.transform.DORotateQuaternion(newRot , 0.25f);
+
+        }
+        yield return null;
     }
    
     public void Drag ( Vector3 Offset )
@@ -140,7 +169,7 @@ public class Block : MonoBehaviour
         {
             Meshes [i].material = originalMaterials [i];
         }
-        transform.eulerAngles = Vector3.zero;
+        transform.eulerAngles = new Vector3(0,transform.eulerAngles.y,0);
         Vector3 Offset = new Vector3(0 , .5f , 0);
         StartPos = new Vector3(transform.position.x , StartPos.y+Offset.y  , transform.position.z);
         if (transform.GetComponentInParent<BlockTarget>()?.TheOwner)
@@ -150,6 +179,7 @@ public class Block : MonoBehaviour
         else
         {
             transform.DOMove(StartPos , .5f);
+            
         }
         
 
@@ -170,17 +200,24 @@ public class Block : MonoBehaviour
     public bool CheckCorrect ()
     {
         int correctCount = 0;
-        Vector3 offset = Vector3.zero;
-        for(int i =0 ; i < blockTiles.Length ;i++)
+        Vector3 cumulativeOffset = Vector3.zero;
+
+        for (int i = 0 ; i < blockTiles.Length ; i++)
         {
             Transform hitTransform = blockTiles [i].GetSingleHit();
+
             if (hitTransform != null && hitTransform.GetComponentInParent<Tile>() is Tile tileComponent)
             {
                 if (tileComponent.AddOwner(blockTiles [i].gameObject))
                 {
                     correctCount++;
-                    offset = transform.InverseTransformPoint(hitTransform.GetComponentInParent<Tile>().transform.position)
-                        - blockTiles [i].transform.localPosition;
+
+                    Vector3 localTilePos = transform.InverseTransformPoint(hitTransform.GetComponentInParent<Tile>().transform.position);
+                    Vector3 localBlockTilePos = blockTiles [i].transform.localPosition;
+
+                    // Accumulate the offset in local space
+                    Vector3 localOffset = localTilePos - localBlockTilePos;
+                    cumulativeOffset += localOffset;
                 }
             }
         }
@@ -188,23 +225,33 @@ public class Block : MonoBehaviour
         if (correctCount == blockTiles.Length)
         {
             IsPlaced = true;
-            Vector3 TargetPos = transform.position + new Vector3(0 , 0 , 0) + offset;
-            transform.DOMove(TargetPos , 0.1f)
+
+            // Average offset for all tiles
+            Vector3 finalOffset = cumulativeOffset / correctCount;
+
+            // Convert the final offset back to world space and move the block
+            Vector3 targetPos = transform.TransformPoint(finalOffset);
+
+
+            transform.DOMove(targetPos , 0.1f)
                 .OnComplete(() =>
                 {
-                    for(int i = 0 ; i < blockTiles.Length ;i++)
+                    for (int i = 0 ; i < blockTiles.Length ; i++)
                     {
-                        if(blockTiles [i].LandingSmoke)
+                        if (blockTiles [i].LandingSmoke)
                         {
                             blockTiles [i].LandingSmoke.GetComponent<ParticleSystem>().Play();
                         }
                     }
+
                     Camera.main.DOShakePosition(.2f , .1f , 1 , 45 , true , ShakeRandomnessMode.Harmonic);
                 });
+
             return true;
         }
         else
         {
+            // Reset ownership for incorrect placement
             foreach (var tile in blockTiles)
             {
                 if (tile.OccupiedTarget != null)
