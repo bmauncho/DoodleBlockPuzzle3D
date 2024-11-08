@@ -44,6 +44,7 @@ public class BlockManager : MonoBehaviour
                 // Instantiate block from the first in the list
                 GameObject block = CommandCenter.Instance.BlockLib_.GetBlockPref(blocks [0].Type_);
                 GameObject go = Instantiate(block , spawnPos.position , Quaternion.identity);
+                go.GetComponent<Block>().type = blocks [0].Type_;
                 MaterialSwap(go,CommandCenter.Instance.ColorLib_.GetMaterial(blocks [0].Color_));
                 blockTargets [i].TheOwner = go;
                 go.transform.SetParent(blockTargets [i].transform);

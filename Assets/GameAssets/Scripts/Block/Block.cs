@@ -11,14 +11,27 @@ public class Block : MonoBehaviour
     Transform PrevPos;
     public bool IsDrag = false;
     public bool IsPlaced = false;
-    BlockTile [] blockTiles;
+    public BlockTile [] blockTiles;
     public bool IsClicked;
+    public BlockType type;
+    private GameObject marker;
 
     private void Start ()
     {
-        PrevPos = GetComponentInParent<BlockTarget> ().transform;
+        PrevPos = GetComponentInParent<BlockTarget>().transform;
         blockTiles = GetComponentsInChildren<BlockTile>();
         level = GetComponentInParent(typeof(Level)) as Level;
+        SetUp();
+    }
+
+    public void SetUp ()
+    {
+        // Create a small sphere as the marker
+        marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        marker.transform.SetParent(GetComponentInParent<Level>().transform);
+        marker.transform.localScale = new Vector3(1, 0.2f , 1);
+        marker.GetComponent<Renderer>().GetComponent<Collider>().enabled = false;
+        marker.GetComponent<Renderer>().enabled = false; // Set the marker color to red for visibility
     }
 
     private void Update ()
@@ -31,12 +44,12 @@ public class Block : MonoBehaviour
         if (isClockwise)
         {
             Debug.Log("Rotate clockwise");
-            //StartCoroutine(Rotation(true));  
+            StartCoroutine(Rotation(true));  
         }
         else
         {
             Debug.Log("Rotate  counterclockwise");
-            //StartCoroutine(Rotation(false));
+            StartCoroutine(Rotation(false));
         }
         
     }
@@ -201,6 +214,9 @@ public class Block : MonoBehaviour
     {
         int correctCount = 0;
         Vector3 cumulativeOffset = Vector3.zero;
+        //Vector3 [] intendedPositions = new Vector3 [blockTiles.Length];
+        List<GameObject> Tiles = new List<GameObject>();
+        Tiles.Clear();
 
         for (int i = 0 ; i < blockTiles.Length ; i++)
         {
@@ -212,12 +228,18 @@ public class Block : MonoBehaviour
                 {
                     correctCount++;
 
-                    Vector3 localTilePos = transform.InverseTransformPoint(hitTransform.GetComponentInParent<Tile>().transform.position);
-                    Vector3 localBlockTilePos = blockTiles [i].transform.localPosition;
+                    Tiles.Add(tileComponent.gameObject);
+                    #region
+                    //Vector3 localTilePos = transform.InverseTransformPoint(hitTransform.GetComponentInParent<Tile>().transform.position);
+                    //Vector3 localBlockTilePos = blockTiles [i].transform.localPosition;
 
-                    // Accumulate the offset in local space
-                    Vector3 localOffset = localTilePos - localBlockTilePos;
-                    cumulativeOffset += localOffset;
+                    //// Accumulate the offset in local space
+                    //Vector3 localOffset = localTilePos - localBlockTilePos;
+                    //cumulativeOffset += localOffset;
+
+                    //// Store intended position
+                    //intendedPositions [i] = localTilePos;
+                    #endregion
                 }
             }
         }
@@ -225,14 +247,19 @@ public class Block : MonoBehaviour
         if (correctCount == blockTiles.Length)
         {
             IsPlaced = true;
+            #region
+            //// Average offset for all tiles
+            //Vector3 finalOffset = cumulativeOffset / correctCount;
 
-            // Average offset for all tiles
-            Vector3 finalOffset = cumulativeOffset / correctCount;
+            //// Convert the final offset back to world space and move the block
+            //Vector3 targetPos = transform.TransformPoint(finalOffset);
 
-            // Convert the final offset back to world space and move the block
-            Vector3 targetPos = transform.TransformPoint(finalOffset);
+            // Start moving the block
+            #endregion
+            // Call the method with Tiles.ToArray()
+            Vector3 centerPoint = FindCenterPoint(Tiles.ToArray());
 
-
+            Vector3 targetPos = centerPoint;
             transform.DOMove(targetPos , 0.1f)
                 .OnComplete(() =>
                 {
@@ -266,6 +293,26 @@ public class Block : MonoBehaviour
             }
             return false;
         }
+    }
+
+    public  Vector3 FindCenterPoint ( GameObject [] gameObjects )
+    {
+        if (gameObjects.Length == 0)
+            return Vector3.zero;
+        if (gameObjects.Length == 1)
+            return gameObjects [0].transform.position;
+
+        // Initialize bounds at the position of the first blockTile
+        Bounds bounds = new Bounds(gameObjects [0].transform.position , Vector3.zero);
+
+        // Expand bounds to include all BlockTile positions
+        for (int i = 1 ; i < gameObjects.Length ; i++)
+        {
+            bounds.Encapsulate(gameObjects [i].transform.position);
+        }
+
+        // Return the center point of the bounds
+        return bounds.center;
     }
 
     public bool CheckClick ()
